@@ -1,25 +1,73 @@
 #!/usr/bin/env python3
 """
-Garmin Data Discovery Script with MFA Support
+Garmin Data Discovery Script with Token/MFA Support
 Discovers all available data points from your Garmin device
+
+Uses token-based auth if available (no MFA needed), falls back to password+MFA
 """
 
 import json
 import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 from garminconnect import Garmin
+
+def load_config(config_path="config.json"):
+    """Load config file if it exists."""
+    config_file = Path(__file__).parent / config_path
+    
+    if config_file.exists():
+        with open(config_file) as f:
+            return json.load(f)
+    return None
 
 def prompt_for_mfa():
     """Prompt user for MFA code."""
-    print("\n🔑 MFA Required!")
+    print("\n🔑 MFA Code Required!")
     print("Check your email for the Garmin verification code.")
     code = input("Enter MFA code: ").strip()
     return code
 
-def discover_garmin_data(email, password):
-    """Connect to Garmin and discover all available data points."""
+def connect_to_garmin():
+    """Connect to Garmin using tokens or credentials."""
     
-    print("🔐 Connecting to Garmin Connect...")
+    # Try loading config first
+    config = load_config()
+    
+    # Method 1: Try token-based auth (no MFA needed!)
+    if config and config.get("garmin", {}).get("tokens"):
+        try:
+            print("🔐 Connecting with saved tokens...")
+            client = Garmin()
+            client.garth.loads(config["garmin"]["tokens"])
+            client.display_name = client.garth.profile.get("displayName", "User")
+            print(f"✅ Connected as: {client.display_name} (using tokens)\n")
+            return client
+        except Exception as e:
+            print(f"⚠️  Saved tokens failed: {e}")
+            print("Falling back to credential login...\n")
+    
+    # Method 2: Password auth with MFA support
+    email = None
+    password = None
+    
+    # Try to get credentials from config
+    if config and config.get("garmin", {}).get("email"):
+        email = config["garmin"]["email"]
+        password = config["garmin"].get("password")
+        print(f"📧 Using email from config: {email}")
+        if not password:
+            password = input("Garmin password: ").strip()
+    else:
+        # Prompt for credentials
+        email = input("Garmin email: ").strip()
+        password = input("Garmin password: ").strip()
+    
+    if not email or not password:
+        print("❌ Email and password required")
+        return None
+    
+    print("\n🔐 Connecting to Garmin Connect...")
     print("(If you have MFA enabled, check your email for a code)\n")
     
     try:
@@ -27,6 +75,15 @@ def discover_garmin_data(email, password):
         client = Garmin(email, password, prompt_mfa=prompt_for_mfa)
         client.login()
         print("\n✅ Connected successfully!\n")
+        
+        # Save tokens for future use
+        save_option = input("💾 Save tokens to config.json for future use? (Y/n): ").strip().lower()
+        if save_option != 'n':
+            save_tokens(client.garth.dumps(), email)
+            print("✅ Tokens saved! Future runs won't need MFA.\n")
+        
+        return client
+        
     except Exception as e:
         print(f"❌ Connection failed: {e}")
         print("\nTroubleshooting:")
@@ -35,6 +92,32 @@ def discover_garmin_data(email, password):
         print("3. MFA codes expire quickly - try again for a fresh code")
         print("4. Check https://connect.garmin.com to verify account status")
         return None
+
+def save_tokens(tokens, email):
+    """Save tokens to config.json."""
+    config_file = Path(__file__).parent / "config.json"
+    
+    # Load existing config or create new one
+    if config_file.exists():
+        with open(config_file) as f:
+            config = json.load(f)
+    else:
+        config = {
+            "garmin": {},
+            "data_dir": "~/clawd/fitness",
+            "timezone": "Europe/London"
+        }
+    
+    # Update with tokens
+    config["garmin"]["email"] = email
+    config["garmin"]["tokens"] = tokens
+    
+    # Save to file
+    with open(config_file, 'w') as f:
+        json.dump(config, f, indent=2)
+
+def discover_garmin_data(client):
+    """Discover all available data points from connected Garmin client."""
     
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
@@ -64,11 +147,11 @@ def discover_garmin_data(email, password):
         ("get_full_name", "User Name", lambda: client.get_full_name()),
     ]
     
-    print("🔍 Discovering available data points from your Garmin Venu 4...\n")
+    print("🔍 Discovering available data points from your Garmin device...\n")
     
     for endpoint_name, description, func in endpoints:
         try:
-            print(f"Testing: {description:<30} ", end="")
+            print(f"Testing: {description:<30} ", end="", flush=True)
             data = func()
             
             if data:
@@ -109,7 +192,7 @@ def discover_garmin_data(email, password):
 def print_summary(results):
     """Print a summary of discovered data."""
     print("\n" + "="*80)
-    print("📊 GARMIN VENU 4 - DATA DISCOVERY SUMMARY")
+    print("📊 GARMIN DATA DISCOVERY SUMMARY")
     print("="*80)
     
     # Device info
@@ -147,23 +230,22 @@ def print_summary(results):
     print("="*80)
 
 def main():
-    print("🏃‍♂️ Garmin Venu 4 Data Discovery Tool\n")
+    print("🏃‍♂️ Garmin Data Discovery Tool\n")
     print("This tool will:")
     print("  1. Connect to your Garmin Connect account")
     print("  2. Test all available API endpoints")
-    print("  3. Show what data your Venu 4 provides")
+    print("  3. Show what data your device provides")
     print("  4. Save results for the Clawdbot skill\n")
     
-    # Get credentials
-    email = input("Garmin email: ").strip()
-    password = input("Garmin password: ").strip()
+    # Connect to Garmin (tries tokens first, then password+MFA)
+    client = connect_to_garmin()
     
-    if not email or not password:
-        print("❌ Email and password required")
+    if not client:
+        print("❌ Failed to connect to Garmin")
         sys.exit(1)
     
     # Discover data
-    results = discover_garmin_data(email, password)
+    results = discover_garmin_data(client)
     
     if results:
         print_summary(results)
