@@ -19,6 +19,7 @@ build/
 *.json.bak
 garmin_last_pull.json
 garmin_summary.md
+garmin_discovery_results.json
 
 # IDE
 .vscode/
