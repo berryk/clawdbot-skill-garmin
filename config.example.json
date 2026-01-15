@@ -1,0 +1,13 @@
+{
+  "garmin": {
+    "email": "your-email@example.com",
+    "password": "your-garmin-password"
+  },
+  "data_dir": "~/clawd/fitness",
+  "timezone": "Europe/London",
+  "sync_schedule": {
+    "morning": "06:30",
+    "noon": "12:00",
+    "evening": "21:00"
+  }
+}
