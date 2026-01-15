@@ -43,11 +43,10 @@ cd clawdbot-skill-garmin
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Copy config template
-cp config.example.json config.json
+# Generate authentication tokens (handles MFA)
+python3 generate_tokens.py
 
-# Edit config with your Garmin credentials
-nano config.json
+# This creates config.json with your tokens - no MFA needed after this!
 
 # Install skill to Clawdbot
 mkdir -p ~/.npm-global/lib/node_modules/clawdbot/skills/garmin
@@ -58,7 +57,35 @@ cp config.json ~/.npm-global/lib/node_modules/clawdbot/skills/garmin/
 
 ## Configuration
 
-Edit `config.json` with your settings:
+### Token-Based Authentication (Recommended)
+
+**✅ Handles MFA/2FA automatically** - No need to enter codes every time!
+
+1. Run the token generator:
+   ```bash
+   python3 generate_tokens.py
+   ```
+
+2. Enter your Garmin email and password
+3. If you have MFA enabled, enter the code from your email
+4. Tokens are saved to `config.json` (valid for weeks/months)
+5. No MFA needed for future data pulls!
+
+**config.json structure:**
+```json
+{
+  "garmin": {
+    "email": "your-email@example.com",
+    "tokens": "automatically-generated-token-string"
+  },
+  "data_dir": "~/clawd/fitness",
+  "timezone": "Europe/London"
+}
+```
+
+### Password Authentication (Alternative)
+
+If you don't have MFA enabled, you can use direct password auth:
 
 ```json
 {
@@ -67,16 +94,13 @@ Edit `config.json` with your settings:
     "password": "your-garmin-password"
   },
   "data_dir": "~/clawd/fitness",
-  "timezone": "Europe/London",
-  "sync_schedule": {
-    "morning": "06:30",
-    "noon": "12:00",
-    "evening": "21:00"
-  }
+  "timezone": "Europe/London"
 }
 ```
 
-**Security Note:** Your Garmin credentials are stored locally. Consider using environment variables or encrypted storage in production.
+**Note:** Password auth will fail if you have MFA enabled. Use token-based auth instead.
+
+**Security Note:** Your credentials and tokens are stored locally. The `config.json` file is excluded from git via `.gitignore`.
 
 ## Usage
 

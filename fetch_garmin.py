@@ -45,24 +45,42 @@ class GarminDataFetcher:
             return json.load(f)
     
     def connect(self):
-        """Connect to Garmin Connect."""
+        """Connect to Garmin Connect using tokens or credentials."""
         garmin_config = self.config.get("garmin", {})
         email = garmin_config.get("email")
         password = garmin_config.get("password")
+        tokens = garmin_config.get("tokens")
         
+        # Try token-based auth first (no MFA needed!)
+        if tokens:
+            try:
+                print("🔐 Connecting to Garmin Connect (using saved tokens)...")
+                self.client = Garmin()
+                self.client.garth.loads(tokens)
+                self.client.display_name = self.client.garth.profile.get("displayName", "User")
+                print(f"✅ Connected as: {self.client.display_name}")
+                return True
+            except Exception as e:
+                print(f"⚠️  Saved tokens failed: {e}")
+                print("Falling back to password authentication...")
+        
+        # Fallback to password auth (may require MFA)
         if not email or not password:
-            print("Error: Garmin email and password required in config.json")
+            print("❌ Error: No valid tokens and no credentials in config.json")
+            print("Run: python generate_tokens.py")
             sys.exit(1)
         
         try:
-            print("🔐 Connecting to Garmin Connect...")
+            print("🔐 Connecting to Garmin Connect (using credentials)...")
+            print("⚠️  Note: If you have MFA enabled, this may fail.")
+            print("    Run 'python generate_tokens.py' instead to handle MFA.")
             self.client = Garmin(email, password)
             self.client.login()
             print("✅ Connected successfully!")
             return True
         except GarminConnectAuthenticationError as e:
             print(f"❌ Authentication failed: {e}")
-            print("Check your credentials in config.json")
+            print("\n💡 Tip: Run 'python generate_tokens.py' to handle MFA and save tokens")
             return False
         except GarminConnectConnectionError as e:
             print(f"❌ Connection error: {e}")

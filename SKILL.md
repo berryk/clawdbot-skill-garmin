@@ -29,22 +29,43 @@ cd ~/.npm-global/lib/node_modules/clawdbot/skills/garmin
 pip3 install -r requirements.txt
 ```
 
-### 2. Configure Garmin Credentials
+### 2. Generate Authentication Tokens
 
-Create `config.json`:
+**Recommended approach - handles MFA automatically:**
 
+```bash
+cd ~/.npm-global/lib/node_modules/clawdbot/skills/garmin
+python3 generate_tokens.py
+```
+
+This will:
+1. Prompt for your Garmin email and password
+2. Handle MFA if enabled (check your email for code)
+3. Generate long-lived tokens (valid for weeks/months)
+4. Save tokens to `config.json`
+
+**Result - `config.json`:**
 ```json
 {
   "garmin": {
     "email": "your-email@example.com",
-    "password": "your-garmin-password"
+    "tokens": "automatically-generated-token-string"
   },
   "data_dir": "~/clawd/fitness",
   "timezone": "Europe/London"
 }
 ```
 
-**Security:** Store credentials in environment variables or use a secrets manager in production.
+**Benefits:**
+- ✅ MFA handled once during setup
+- ✅ No MFA codes needed for automated pulls
+- ✅ Tokens automatically refresh
+- ✅ Works with 2FA-enabled accounts
+
+**Alternative (password auth):**
+If you don't have MFA enabled, you can use direct password authentication by creating `config.json` with email/password instead of tokens. However, this will fail if MFA is enabled.
+
+**Security:** Tokens are stored locally in `config.json`. Keep this file secure and do not commit to git (it's in `.gitignore`).
 
 ### 3. Test Connection
 
