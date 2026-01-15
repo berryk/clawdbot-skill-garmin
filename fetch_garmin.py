@@ -286,6 +286,8 @@ class GarminDataFetcher:
             "body_fat_pct", "body_water_pct",
             "muscle_mass_kg", "bone_mass_kg",
             "visceral_fat", "metabolic_age", "weight_date",
+            # Manual Measurements
+            "waist_inches", "waist_cm", "waist_date",
             # Health
             "respiration_avg", "respiration_min", "respiration_max",
             "spo2_latest", "spo2_avg", "spo2_min",
