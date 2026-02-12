@@ -102,7 +102,16 @@ class GarminDataFetcher:
     def fetch_daily_stats(self, date=None):
         """Fetch comprehensive stats for a specific date."""
         if date is None:
-            date = datetime.now().date()
+            # Get timezone from config (updated by sync_timezone.py)
+            tz_name = self.config.get('timezone', 'UTC')
+            try:
+                from zoneinfo import ZoneInfo
+                tz = ZoneInfo(tz_name)
+                date = datetime.now(tz).date()
+                print(f"📍 Using timezone: {tz_name} (today: {date})")
+            except Exception as e:
+                print(f"⚠️  Timezone error ({e}), falling back to UTC")
+                date = datetime.now().date()
         elif isinstance(date, str):
             date = datetime.strptime(date, "%Y-%m-%d").date()
         
