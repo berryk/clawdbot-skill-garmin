@@ -118,6 +118,11 @@ class GarminDataFetcher:
         date_str = date.isoformat()
         print(f"📊 Fetching data for {date}...")
         
+        # Helper to safely get numeric values (handles None)
+        def safe_get(d, key, default=None):
+            val = d.get(key)
+            return val if val is not None else default
+        
         stats = {
             "date": date_str,
             "fetched_at": datetime.now().isoformat()
@@ -129,47 +134,53 @@ class GarminDataFetcher:
             summary = self.client.get_stats(date_str)
             
             # Activity metrics
-            stats["steps"] = summary.get("totalSteps", 0)
-            stats["distance_km"] = round(summary.get("totalDistanceMeters", 0) / 1000, 2)
-            stats["distance_miles"] = round(summary.get("totalDistanceMeters", 0) / 1609.34, 2)
-            stats["calories_total"] = summary.get("totalKilocalories", 0)
-            stats["calories_active"] = summary.get("activeKilocalories", 0)
-            stats["calories_bmr"] = summary.get("bmrKilocalories", 0)
-            stats["floors_up"] = summary.get("floorsAscended", 0)
-            stats["floors_down"] = summary.get("floorsDescended", 0)
-            stats["active_minutes_moderate"] = summary.get("moderateIntensityMinutes", 0)
-            stats["active_minutes_vigorous"] = summary.get("vigorousIntensityMinutes", 0)
-            stats["sedentary_hours"] = round(summary.get("sedentarySeconds", 0) / 3600, 2)
+            stats["steps"] = safe_get(summary, "totalSteps", 0)
+            distance_m = safe_get(summary, "totalDistanceMeters", 0)
+            stats["distance_km"] = round(distance_m / 1000, 2) if distance_m else None
+            stats["distance_miles"] = round(distance_m / 1609.34, 2) if distance_m else None
+            stats["calories_total"] = safe_get(summary, "totalKilocalories", 0)
+            stats["calories_active"] = safe_get(summary, "activeKilocalories", 0)
+            stats["calories_bmr"] = safe_get(summary, "bmrKilocalories", 0)
+            stats["floors_up"] = safe_get(summary, "floorsAscended", 0)
+            stats["floors_down"] = safe_get(summary, "floorsDescended", 0)
+            stats["active_minutes_moderate"] = safe_get(summary, "moderateIntensityMinutes", 0)
+            stats["active_minutes_vigorous"] = safe_get(summary, "vigorousIntensityMinutes", 0)
+            sedentary_sec = safe_get(summary, "sedentarySeconds", 0)
+            stats["sedentary_hours"] = round(sedentary_sec / 3600, 2) if sedentary_sec else None
             
             # Heart Rate from summary
-            stats["resting_hr"] = summary.get("restingHeartRate")
-            stats["min_hr"] = summary.get("minHeartRate")
-            stats["max_hr"] = summary.get("maxHeartRate")
-            stats["avg_hr_7day"] = summary.get("lastSevenDaysAvgRestingHeartRate")
+            stats["resting_hr"] = safe_get(summary, "restingHeartRate")
+            stats["min_hr"] = safe_get(summary, "minHeartRate")
+            stats["max_hr"] = safe_get(summary, "maxHeartRate")
+            stats["avg_hr_7day"] = safe_get(summary, "lastSevenDaysAvgRestingHeartRate")
             
             # Stress from summary
-            stats["stress_avg"] = summary.get("averageStressLevel")
-            stats["stress_max"] = summary.get("maxStressLevel")
-            stats["stress_rest_min"] = round(summary.get("restStressDuration", 0) / 60, 1)
-            stats["stress_low_min"] = round(summary.get("lowStressDuration", 0) / 60, 1)
-            stats["stress_med_min"] = round(summary.get("mediumStressDuration", 0) / 60, 1)
-            stats["stress_high_min"] = round(summary.get("highStressDuration", 0) / 60, 1)
+            stats["stress_avg"] = safe_get(summary, "averageStressLevel")
+            stats["stress_max"] = safe_get(summary, "maxStressLevel")
+            rest_stress = safe_get(summary, "restStressDuration", 0)
+            low_stress = safe_get(summary, "lowStressDuration", 0)
+            med_stress = safe_get(summary, "mediumStressDuration", 0)
+            high_stress = safe_get(summary, "highStressDuration", 0)
+            stats["stress_rest_min"] = round(rest_stress / 60, 1) if rest_stress else None
+            stats["stress_low_min"] = round(low_stress / 60, 1) if low_stress else None
+            stats["stress_med_min"] = round(med_stress / 60, 1) if med_stress else None
+            stats["stress_high_min"] = round(high_stress / 60, 1) if high_stress else None
             
             # Body Battery from summary
-            stats["bb_charged"] = summary.get("bodyBatteryChargedValue")
-            stats["bb_drained"] = summary.get("bodyBatteryDrainedValue")
-            stats["bb_high"] = summary.get("bodyBatteryHighestValue")
-            stats["bb_low"] = summary.get("bodyBatteryLowestValue")
+            stats["bb_charged"] = safe_get(summary, "bodyBatteryChargedValue")
+            stats["bb_drained"] = safe_get(summary, "bodyBatteryDrainedValue")
+            stats["bb_high"] = safe_get(summary, "bodyBatteryHighestValue")
+            stats["bb_low"] = safe_get(summary, "bodyBatteryLowestValue")
             
             # Respiration from summary
-            stats["respiration_avg"] = summary.get("avgWakingRespirationValue")
-            stats["respiration_min"] = summary.get("lowestRespirationValue")
-            stats["respiration_max"] = summary.get("highestRespirationValue")
+            stats["respiration_avg"] = safe_get(summary, "avgWakingRespirationValue")
+            stats["respiration_min"] = safe_get(summary, "lowestRespirationValue")
+            stats["respiration_max"] = safe_get(summary, "highestRespirationValue")
             
             # SpO2 from summary
-            stats["spo2_latest"] = summary.get("latestSpo2")
-            stats["spo2_avg"] = summary.get("averageSpo2")
-            stats["spo2_min"] = summary.get("lowestSpo2")
+            stats["spo2_latest"] = safe_get(summary, "latestSpo2")
+            stats["spo2_avg"] = safe_get(summary, "averageSpo2")
+            stats["spo2_min"] = safe_get(summary, "lowestSpo2")
             
             print("✅")
             
@@ -184,11 +195,17 @@ class GarminDataFetcher:
             if sleep_data and 'dailySleepDTO' in sleep_data:
                 sleep = sleep_data['dailySleepDTO']
                 
-                stats["sleep_hours"] = round(sleep.get("sleepTimeSeconds", 0) / 3600, 2)
-                stats["sleep_deep_min"] = round(sleep.get("deepSleepSeconds", 0) / 60, 1)
-                stats["sleep_light_min"] = round(sleep.get("lightSleepSeconds", 0) / 60, 1)
-                stats["sleep_rem_min"] = round(sleep.get("remSleepSeconds", 0) / 60, 1)
-                stats["sleep_awake_min"] = round(sleep.get("awakeSleepSeconds", 0) / 60, 1)
+                sleep_sec = safe_get(sleep, "sleepTimeSeconds", 0)
+                deep_sec = safe_get(sleep, "deepSleepSeconds", 0)
+                light_sec = safe_get(sleep, "lightSleepSeconds", 0)
+                rem_sec = safe_get(sleep, "remSleepSeconds", 0)
+                awake_sec = safe_get(sleep, "awakeSleepSeconds", 0)
+                
+                stats["sleep_hours"] = round(sleep_sec / 3600, 2) if sleep_sec else None
+                stats["sleep_deep_min"] = round(deep_sec / 60, 1) if deep_sec else None
+                stats["sleep_light_min"] = round(light_sec / 60, 1) if light_sec else None
+                stats["sleep_rem_min"] = round(rem_sec / 60, 1) if rem_sec else None
+                stats["sleep_awake_min"] = round(awake_sec / 60, 1) if awake_sec else None
                 
                 # Sleep scores
                 scores = sleep.get("sleepScores", {})
@@ -202,7 +219,7 @@ class GarminDataFetcher:
                 if sleep.get("sleepEndTimestampLocal"):
                     stats["sleep_end"] = sleep.get("sleepEndTimestampLocal")
                 
-                stats["sleep_stress_avg"] = sleep.get("avgSleepStress")
+                stats["sleep_stress_avg"] = safe_get(sleep, "avgSleepStress")
                 
             print("✅")
             
@@ -339,52 +356,59 @@ class GarminDataFetcher:
         
         date_str = datetime.fromisoformat(stats['date']).strftime("%A, %B %d, %Y")
         
+        # Helper to format values safely
+        def fmt_num(val, default=0):
+            return val if val is not None else default
+        
+        def fmt_str(val, default='N/A'):
+            return val if val is not None else default
+        
         summary = f"""# Garmin Fitness Summary
 
 ## {date_str}
 
 ### Activity 🏃‍♂️
-- 🚶 **Steps:** {stats.get('steps', 0):,}
-- 📏 **Distance:** {stats.get('distance_km', 0)} km ({stats.get('distance_miles', 0)} miles)
-- 🔥 **Calories:** {stats.get('calories_total', 0):,} (Active: {stats.get('calories_active', 0):,})
-- ⚡ **Active Minutes:** Moderate: {stats.get('active_minutes_moderate', 0)}, Vigorous: {stats.get('active_minutes_vigorous', 0)}
-- 🪜 **Floors:** Up: {stats.get('floors_up', 0)}, Down: {stats.get('floors_down', 0)}
-- 💺 **Sedentary:** {stats.get('sedentary_hours', 0)} hours
+- 🚶 **Steps:** {fmt_num(stats.get('steps')):,}
+- 📏 **Distance:** {fmt_num(stats.get('distance_km'))} km ({fmt_num(stats.get('distance_miles'))} miles)
+- 🔥 **Calories:** {fmt_num(stats.get('calories_total')):,} (Active: {fmt_num(stats.get('calories_active')):,})
+- ⚡ **Active Minutes:** Moderate: {fmt_num(stats.get('active_minutes_moderate'))}, Vigorous: {fmt_num(stats.get('active_minutes_vigorous'))}
+- 🪜 **Floors:** Up: {fmt_num(stats.get('floors_up'))}, Down: {fmt_num(stats.get('floors_down'))}
+- 💺 **Sedentary:** {fmt_num(stats.get('sedentary_hours'))} hours
 
 ### Sleep 💤
-- 💤 **Total Sleep:** {stats.get('sleep_hours', 0)} hours
-- ⭐ **Sleep Score:** {stats.get('sleep_score', 'N/A')}/100
-- 🌊 **Deep Sleep:** {stats.get('sleep_deep_min', 0)} min
-- 🌙 **Light Sleep:** {stats.get('sleep_light_min', 0)} min
-- 🧠 **REM Sleep:** {stats.get('sleep_rem_min', 0)} min
-- 🔔 **Awake:** {stats.get('sleep_awake_min', 0)} min
-- 📅 **Bedtime:** {stats.get('sleep_start', 'N/A')}
-- ⏰ **Wake Time:** {stats.get('sleep_end', 'N/A')}
+- 💤 **Total Sleep:** {fmt_num(stats.get('sleep_hours'))} hours
+- ⭐ **Sleep Score:** {fmt_str(stats.get('sleep_score'))}/100
+- 🌊 **Deep Sleep:** {fmt_num(stats.get('sleep_deep_min'))} min
+- 🌙 **Light Sleep:** {fmt_num(stats.get('sleep_light_min'))} min
+- 🧠 **REM Sleep:** {fmt_num(stats.get('sleep_rem_min'))} min
+- 🔔 **Awake:** {fmt_num(stats.get('sleep_awake_min'))} min
+- 📅 **Bedtime:** {fmt_str(stats.get('sleep_start'))}
+- ⏰ **Wake Time:** {fmt_str(stats.get('sleep_end'))}
 
 ### Heart Rate ❤️
-- ❤️ **Resting HR:** {stats.get('resting_hr', 'N/A')} bpm
-- 📈 **Max HR:** {stats.get('max_hr', 'N/A')} bpm
-- 📊 **Min HR:** {stats.get('min_hr', 'N/A')} bpm
+- ❤️ **Resting HR:** {fmt_str(stats.get('resting_hr'))} bpm
+- 📈 **Max HR:** {fmt_str(stats.get('max_hr'))} bpm
+- 📊 **Min HR:** {fmt_str(stats.get('min_hr'))} bpm
 
 ### Stress & Recovery 🧘
-- 🧘 **Stress (avg):** {stats.get('stress_avg', 'N/A')}
-- 🔋 **Body Battery:** High: {stats.get('bb_high', 'N/A')}, Low: {stats.get('bb_low', 'N/A')}
-- ⚡ **Charged:** {stats.get('bb_charged', 'N/A')} | **Drained:** {stats.get('bb_drained', 'N/A')}
+- 🧘 **Stress (avg):** {fmt_str(stats.get('stress_avg'))}
+- 🔋 **Body Battery:** High: {fmt_str(stats.get('bb_high'))}, Low: {fmt_str(stats.get('bb_low'))}
+- ⚡ **Charged:** {fmt_str(stats.get('bb_charged'))} | **Drained:** {fmt_str(stats.get('bb_drained'))}
 
 ### Weight & Body Composition ⚖️
-- ⚖️ **Weight:** {stats.get('weight_kg', 'N/A')} kg ({stats.get('weight_lbs', 'N/A')} lbs)
-- 📊 **BMI:** {stats.get('bmi', 'N/A')}
-- 💪 **Body Fat:** {stats.get('body_fat_pct', 'N/A')}%
-- 🏋️ **Muscle Mass:** {stats.get('muscle_mass_kg', 'N/A')} kg
-- 💧 **Body Water:** {stats.get('body_water_pct', 'N/A')}%
+- ⚖️ **Weight:** {fmt_str(stats.get('weight_kg'))} kg ({fmt_str(stats.get('weight_lbs'))} lbs)
+- 📊 **BMI:** {fmt_str(stats.get('bmi'))}
+- 💪 **Body Fat:** {fmt_str(stats.get('body_fat_pct'))}%
+- 🏋️ **Muscle Mass:** {fmt_str(stats.get('muscle_mass_kg'))} kg
+- 💧 **Body Water:** {fmt_str(stats.get('body_water_pct'))}%
 
 ### Health Metrics 🏥
-- 🫁 **Respiration:** {stats.get('respiration_avg', 'N/A')} brpm
-- 🩸 **SpO2:** {stats.get('spo2_latest', 'N/A')}%
+- 🫁 **Respiration:** {fmt_str(stats.get('respiration_avg'))} brpm
+- 🩸 **SpO2:** {fmt_str(stats.get('spo2_latest'))}%
 
 ### Performance 🏆
-- 🏃 **VO2 Max:** {stats.get('vo2_max', 'N/A')}
-- 🎂 **Fitness Age:** {stats.get('fitness_age', 'N/A')}
+- 🏃 **VO2 Max:** {fmt_str(stats.get('vo2_max'))}
+- 🎂 **Fitness Age:** {fmt_str(stats.get('fitness_age'))}
 
 ---
 *Last updated: {stats.get('fetched_at', 'N/A')}*

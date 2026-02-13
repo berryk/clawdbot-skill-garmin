@@ -1,0 +1,45 @@
+{
+  "timezone": "Asia/Hong_Kong",
+  "updated_at": "2026-02-12T00:44:13.670401",
+  "jobs": [
+    {
+      "id": "garmin-morning",
+      "name": "Garmin Morning Sync",
+      "schedule": "30 22 * * *",
+      "action": {
+        "type": "exec",
+        "command": "python3",
+        "args": [
+          "~/.npm-global/lib/node_modules/clawdbot/skills/garmin/fetch_garmin.py"
+        ]
+      },
+      "enabled": true
+    },
+    {
+      "id": "garmin-noon",
+      "name": "Garmin Noon Sync",
+      "schedule": "0 4 * * *",
+      "action": {
+        "type": "exec",
+        "command": "python3",
+        "args": [
+          "~/.npm-global/lib/node_modules/clawdbot/skills/garmin/fetch_garmin.py"
+        ]
+      },
+      "enabled": true
+    },
+    {
+      "id": "garmin-evening",
+      "name": "Garmin Evening Sync",
+      "schedule": "0 13 * * *",
+      "action": {
+        "type": "exec",
+        "command": "python3",
+        "args": [
+          "~/.npm-global/lib/node_modules/clawdbot/skills/garmin/fetch_garmin.py"
+        ]
+      },
+      "enabled": true
+    }
+  ]
+}
