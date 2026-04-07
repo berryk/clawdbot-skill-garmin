@@ -1,0 +1,13 @@
+[project]
+name = "claw-skill-garmin"
+version = "0.1.0"
+description = "Garmin fitness sync scripts for Clawdbot"
+requires-python = ">=3.12"
+dependencies = [
+  "garminconnect==0.2.38",
+  "pandas>=2.0.0",
+  "requests>=2.31.0",
+]
+
+[tool.uv]
+package = false
